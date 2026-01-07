@@ -103,4 +103,11 @@ impl LogParser {
         // Clean up whitespace
         msg.trim().to_string()
     }
+        /// Extract log level if present
+    fn extract_level(&self, line: &str) -> Option<LogLevel> {
+        self.level_regex
+            .captures(line)
+            .and_then(|cap| cap.get(1))
+            .and_then(|m| LogLevel::from_str(m.as_str()))
+    }
 }
