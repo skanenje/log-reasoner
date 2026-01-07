@@ -27,5 +27,25 @@ impl LogParser {
             ).unwrap(),
         }
     }
+        /// Parse a log file from path
+    pub fn parse_file(&self, path: &str) -> Result<Vec<LogEvent>> {
+        let file = File::open(path)
+            .with_context(|| format!("Failed to open log file: {}", path))?;
+        
+        let reader = BufReader::new(file);
+        let mut events = Vec::new();
 
+        for line in reader.lines() {
+            let line = line?;
+            
+            // Skip empty lines
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            events.push(self.parse_line(&line));
+        }
+
+        Ok(events)
+    }
 }
