@@ -61,4 +61,29 @@ impl LogParser {
             raw: line.to_string(),
         }
     }
+        /// Extract timestamp if present
+    fn extract_timestamp(&self, line: &str) -> Option<DateTime<Utc>> {
+        self.timestamp_regex
+            .captures(line)
+            .and_then(|cap| cap.get(1))
+            .and_then(|m| {
+                // Try parsing with multiple formats
+                let ts_str = m.as_str();
+                
+                // ISO8601 with Z
+                if let Ok(dt) = DateTime::parse_from_rfc3339(ts_str) {
+                    return Some(dt.with_timezone(&Utc));
+                }
+                
+                // Space-separated format
+                if let Ok(dt) = DateTime::parse_from_str(
+                    &format!("{}Z", ts_str.replace(" ", "T")),
+                    "%Y-%m-%dT%H:%M:%S%Z"
+                ) {
+                    return Some(dt.with_timezone(&Utc));
+                }
+                
+                None
+            })
+    }
 }
