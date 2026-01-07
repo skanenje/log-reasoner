@@ -3,12 +3,16 @@ mod ingest;
 mod grouper;
 mod cli;
 mod output;
+mod backends;
+mod embedding;
 
 use clap::Parser;
 use cli::{Cli, Commands};
 use ingest::LogParser;
 use grouper::LogGrouper;
 use output::OutputFormatter;
+use backends::ollama::OllamaBackend;
+use embedding::EmbeddingGenerator;
 use std::time::Instant;
 
 fn main() {
@@ -66,7 +70,38 @@ fn analyze_logs(file_path: &str, top_n: usize, min_count: usize, output_format: 
     let stats = LogGrouper::get_stats(&groups);
     println!("✓ Grouped into {} unique patterns ({:.2?})", stats.unique_patterns, group_time);
 
-    // Step 3: Output results
+    // Step 3: Generate embeddings (optional - check if Ollama is available)
+    let ollama = OllamaBackend::new();
+    
+    match ollama.check_available() {
+        Ok(_) => {
+            println!("\n✓ Ollama detected, generating embeddings...");
+            
+            let start = Instant::now();
+            let embedding_gen = EmbeddingGenerator::new(ollama);
+            
+            match embedding_gen.embed_groups(&groups) {
+                Ok(embeddings) => {
+                    let embed_time = start.elapsed();
+                    println!("✓ Generated embeddings ({:.2?})", embed_time);
+                    
+                    // TODO: Use embeddings for semantic clustering (Step 15)
+                    // For now, just show we got them
+                    println!("  Embedding dimension: {}", embeddings[0].1.len());
+                }
+                Err(e) => {
+                    eprintln!("⚠ Warning: Failed to generate embeddings: {}", e);
+                    eprintln!("  Continuing with pattern-based grouping only...\n");
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("⚠ Warning: Ollama not available: {}", e);
+            eprintln!("  Continuing with pattern-based grouping only...\n");
+        }
+    }
+
+    // Step 4: Output results
     match output_format {
         "json" => OutputFormatter::format_json(&groups, &stats, top_n),
         _ => OutputFormatter::format_text(&groups, &stats, top_n),
