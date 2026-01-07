@@ -48,4 +48,17 @@ impl LogParser {
 
         Ok(events)
     }
+        /// Parse a single log line
+    fn parse_line(&self, line: &str) -> LogEvent {
+        let timestamp = self.extract_timestamp(line);
+        let level = self.extract_level(line);
+        let message = self.extract_message(line, &timestamp, &level);
+
+        LogEvent {
+            timestamp,
+            level,
+            message,
+            raw: line.to_string(),
+        }
+    }
 }
