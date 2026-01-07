@@ -11,6 +11,8 @@ pub struct LogParser {
     timestamp_regex: Regex,
     /// Regex for log levels
     level_regex: Regex,
+    /// Regex for CLF (Common Log Format) style logs
+    clf_regex: Regex,
 }
 
 impl LogParser {
@@ -24,6 +26,11 @@ impl LogParser {
             // Matches: ERROR, WARN, INFO, etc. (case-insensitive)
             level_regex: Regex::new(
                 r"(?i)\b(ERROR|ERR|WARN|WARNING|INFO|DEBUG|TRACE)\b"
+            ).unwrap(),
+
+            // Matches: 127.0.0.1 - - [10/Oct/2000:13:55:36 -0700] "GET /index.html HTTP/1.0" 200 2326
+            clf_regex: Regex::new(
+                r#"^(\S+) \S+ \S+ \[([\w:/]+\s[+\-]\d{4})\] ".*?" (\d{3}) (\d+|-)"#
             ).unwrap(),
         }
     }
@@ -63,6 +70,16 @@ impl LogParser {
     }
         /// Extract timestamp if present
     fn extract_timestamp(&self, line: &str) -> Option<DateTime<Utc>> {
+        // Try CLF format first as it's more specific
+        if let Some(cap) = self.clf_regex.captures(line) {
+            if let Some(m) = cap.get(2) {
+                if let Ok(dt) = DateTime::parse_from_str(m.as_str(), "%d/%b/%Y:%H:%M:%S %z") {
+                    return Some(dt.with_timezone(&Utc));
+                }
+            }
+        }
+
+        // Fallback to general timestamp regex
         self.timestamp_regex
             .captures(line)
             .and_then(|cap| cap.get(1))
@@ -105,9 +122,26 @@ impl LogParser {
     }
         /// Extract log level if present
     fn extract_level(&self, line: &str) -> Option<LogLevel> {
-        self.level_regex
-            .captures(line)
-            .and_then(|cap| cap.get(1))
-            .and_then(|m| LogLevel::from_str(m.as_str()))
+        // Try to find explicit log level first
+        if let Some(cap) = self.level_regex.captures(line) {
+            if let Some(m) = cap.get(1) {
+                return LogLevel::from_str(m.as_str());
+            }
+        }
+
+        // If no explicit level, check if it's a CLF log and infer from status code
+        if let Some(cap) = self.clf_regex.captures(line) {
+            if let Some(m) = cap.get(3) {
+                if let Ok(status) = m.as_str().parse::<u16>() {
+                    return match status {
+                        500..=599 => Some(LogLevel::Error),
+                        400..=499 => Some(LogLevel::Warn),
+                        _ => Some(LogLevel::Info),
+                    };
+                }
+            }
+        }
+
+        None
     }
 }

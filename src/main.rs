@@ -8,7 +8,7 @@ fn main() {
 
     // For now, we'll test with a hardcoded path
     // Later this will come from CLI args
-    let test_log_path = "test_logs.txt";
+    let test_log_path = "access_log.txt";
 
     let parser = LogParser::new();
     
