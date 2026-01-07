@@ -86,4 +86,21 @@ impl LogParser {
                 None
             })
     }
+        /// Extract the actual message (remove timestamp and level)
+    fn extract_message(&self, line: &str, timestamp: &Option<DateTime<Utc>>, level: &Option<LogLevel>) -> String {
+        let mut msg = line.to_string();
+
+        // Remove timestamp if found
+        if timestamp.is_some() {
+            msg = self.timestamp_regex.replace(&msg, "").to_string();
+        }
+
+        // Remove level if found
+        if level.is_some() {
+            msg = self.level_regex.replace(&msg, "").to_string();
+        }
+
+        // Clean up whitespace
+        msg.trim().to_string()
+    }
 }
