@@ -1,6 +1,3 @@
-fn main() {
-    println!("Hello, world!");
-}
 mod models;
 
 use models::{LogEvent, LogLevel};
