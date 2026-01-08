@@ -20,6 +20,7 @@ impl OllamaBackend {
         }
     }
 
+    #[allow(dead_code)]
     pub fn with_model(mut self, model: String) -> Self {
         self.model = model;
         self

@@ -37,6 +37,7 @@ impl<B: EmbeddingBackend> EmbeddingGenerator<B> {
     }
 
     /// Calculate cosine similarity between two vectors
+    #[allow(dead_code)]
     pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
         if a.len() != b.len() {
             return 0.0;
